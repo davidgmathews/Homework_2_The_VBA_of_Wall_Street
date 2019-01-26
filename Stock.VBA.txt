@@ -1,0 +1,147 @@
+Sub Summarizer()
+
+'OBJECTIVES:
+'Create a script that will loop through all the stocks and take the following info.
+'Yearly change from what the stock opened the year at to what the closing price was.
+'The percent change from the what it opened the year at to what it closed.
+'The total Volume of the stock Ticker Symbol
+'You should also have conditional formatting that will highlight positive change in green and negative change in red.
+'Your solution will include everything from the moderate challenge.
+'Your solution will also be able to locate the stock with the "Greatest % increase", "Greatest % Decrease" and "Greatest total volume".
+'Make the appropriate adjustments to your script that will allow it to run on every worksheet just by running it once.
+
+'Declare worksheet counter
+Dim ws_count As Integer
+
+'Store the number of worksheets in active workbook
+ws_count = ActiveWorkbook.Worksheets.Count
+
+'For loop to perform actions for all worksheets in the active workbook
+For WSCount = 1 To ws_count
+    
+    'Declare variable to count the number of non-empty cells in the first column
+    'This variable indicates the number of iterations
+    Dim n As Long
+    
+    'Activating a specific workbook, before performing operations on it
+    ActiveWorkbook.Worksheets(WSCount).Activate
+    Range("J:R").Clear
+    
+    'CountA function counts the number of non-empty cells
+    n = Application.CountA(Range("A:A"))
+
+
+    'It is necessary to sort Ticker and Activity Date to more easily
+    'identify transition between tickers
+    With ActiveSheet.Sort
+     .SortFields.Add Key:=Range("A1"), Order:=xlAscending
+     .SortFields.Add Key:=Range("B1"), Order:=xlAscending
+     .SetRange Range("A:G")
+     .Header = xlYes
+     .Apply
+    End With
+
+    'Declaring a counter of unique ticker symbols
+    Dim Ticker_Row As Long
+    'Declaring an accumulator of trading volume
+    Dim Vol As Double
+    'Declaring a variable to store the opening price
+    Dim StartVal As Double
+    'Declaring a variable to store the closing price
+    Dim StopVal As Double
+
+    'Populating field names prior to filling in values
+    ActiveSheet.Cells(1, 10).Value = "Ticker"
+    ActiveSheet.Cells(1, 11).Value = "Yearly Change"
+    ActiveSheet.Cells(1, 12).Value = "Percent Change"
+    ActiveSheet.Cells(1, 13).Value = "Total Stock Volume"
+    ActiveSheet.Cells(2, 16).Value = "Greatest % Increase"
+    ActiveSheet.Cells(3, 16).Value = "Greatest % Decrease"
+    ActiveSheet.Cells(4, 16).Value = "Greatest Total Volume"
+    ActiveSheet.Cells(1, 17).Value = "Ticker"
+    ActiveSheet.Cells(1, 18).Value = "Value"
+
+    'Iterating through all the non-zero rows in the active worksheet
+    For Sheet_Row = 2 To n + 1
+        'Printing first ticker symbol
+        If Sheet_Row = 2 Then
+            Ticker_Row = 2
+            ActiveSheet.Cells(Ticker_Row, 10).Value = ActiveSheet.Cells(Sheet_Row, 1).Value
+            Vol = ActiveSheet.Cells(Sheet_Row, 7).Value
+            StartVal = ActiveSheet.Cells(Sheet_Row, 3).Value
+        'Checking for transition in ticker value
+        ElseIf ActiveSheet.Cells(Sheet_Row, 1) <> ActiveSheet.Cells(Sheet_Row - 1, 1) Then
+        
+            'Capturing closing value on the final day of the given ticker in the work sheet
+            StopVal = ActiveSheet.Cells(Sheet_Row - 1, 6).Value
+            
+            'Filling in annual change
+            ActiveSheet.Cells(Ticker_Row, 11).Value = StopVal - StartVal
+            
+            'Format background color to green for positive annual change, or red for non positive annual change
+            If ActiveSheet.Cells(Ticker_Row, 11).Value > 0 Then
+                ActiveSheet.Cells(Ticker_Row, 11).Interior.ColorIndex = 4
+            Else
+                ActiveSheet.Cells(Ticker_Row, 11).Interior.ColorIndex = 3
+            End If
+            
+            'In the event denominator of the percent increase calculation is zero
+            If StartVal = 0 Then
+               ActiveSheet.Cells(Ticker_Row, 12).Value = ""
+            Else
+               ActiveSheet.Cells(Ticker_Row, 12).Value = (StopVal - StartVal) / StartVal
+               
+            End If
+             
+            'Formatting percentage cell
+            ActiveSheet.Cells(Ticker_Row, 12).NumberFormat = "0.00%"
+            'Filling in annual trading volume
+            ActiveSheet.Cells(Ticker_Row, 13).Value = Vol
+            
+            'Incrementing unique ticker count
+            Ticker_Row = Ticker_Row + 1
+            
+            'Printing next unique ticker
+            ActiveSheet.Cells(Ticker_Row, 10).Value = ActiveSheet.Cells(Sheet_Row, 1).Value
+            
+            'Opening Price
+            StartVal = ActiveSheet.Cells(Sheet_Row, 3).Value
+            
+            'Capturing first day's trading volume
+            Vol = ActiveSheet.Cells(Sheet_Row, 7).Value
+        Else
+            'Accumulating trading volume for the day
+            Vol = Vol + ActiveSheet.Cells(Sheet_Row, 7).Value
+            
+        End If
+    
+    Next Sheet_Row
+    
+    'Collecting maximum percent increase among all tickers in the current worksheet
+    ActiveSheet.Cells(2, 18).Value = Application.Max(ActiveSheet.Cells(2, 12).Resize(Ticker_Row - 2, 1))
+    'Formatting the cell to percentage
+    ActiveSheet.Cells(2, 18).NumberFormat = "0.00%"
+    'Collecting minimum percent increase among all tickers in the current worksheet
+    ActiveSheet.Cells(3, 18).Value = Application.Min(ActiveSheet.Cells(2, 12).Resize(Ticker_Row - 2, 1))
+    'Formatting the cell to percentage
+    ActiveSheet.Cells(3, 18).NumberFormat = "0.00%"
+    'Collecting maximum annual trading volume among all tickers in the current worksheet
+    ActiveSheet.Cells(4, 18).Value = Application.Max(ActiveSheet.Cells(2, 13).Resize(Ticker_Row - 2, 1))
+    
+    'Identifying the index of the maximum percentage increase
+    Max_Index = Application.Match(ActiveSheet.Cells(2, 18).Value, ActiveSheet.Cells(2, 12).Resize(Ticker_Row - 2, 1), 0)
+    'Identifying the index of the minimum percentage change (greatest percentage decrease)
+    Min_Index = Application.Match(ActiveSheet.Cells(3, 18).Value, ActiveSheet.Cells(2, 12).Resize(Ticker_Row - 2, 1), 0)
+    'Identifying the index of the maximum annual trading volume
+    Max_Vol_Index = Application.Match(ActiveSheet.Cells(4, 18).Value, ActiveSheet.Cells(2, 13).Resize(Ticker_Row - 2, 1), 0)
+    
+    'Printing ticker symbol with maximum annual percentage change
+    ActiveSheet.Cells(2, 17).Value = Application.Index(ActiveSheet.Cells(2, 10).Resize(Ticker_Row - 2, 1), Max_Index)
+    'Printing ticker symbol with minimum annual percentage change
+    ActiveSheet.Cells(3, 17).Value = Application.Index(ActiveSheet.Cells(2, 10).Resize(Ticker_Row - 2, 1), Min_Index)
+    'Printing ticker symbol with annual maximum trading volume
+    ActiveSheet.Cells(4, 17).Value = Application.Index(ActiveSheet.Cells(2, 10).Resize(Ticker_Row - 2, 1), Max_Vol_Index)
+
+Next WSCount
+
+End Sub
